@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Video Player - Fullscreen</title>
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+    <div class="channel-container">
+        <div class="start-overlay" id="startOverlay">
+            <div class="channel-group">
+                <h2>🤘 Alt Rock</h2>
+                <button class="startbttn" id="startAlt">Start Alt Rock Channel</button>
+            </div>
+
+            <div class="channel-group">
+                <h2>🎤 Hip Hop</h2>
+                <button class="startbttn" id="startHipHop">Start Hip Hop Channel</button>
+            </div>
+
+            <div class="channel-group">
+                <h2>🌟 Pop</h2>
+                <button class="startbttn" id="startPop">Start Pop Channel</button>
+            </div>
+        </div>
+
+        <video id="musicVideo" loop playsinline>
+            <!-- Start with a placeholder or empty source -->
+        </video>
+
+        <div class="now-playing" id="nowPlaying" style="display: none;">
+            🎵 Now Playing: <span id="currentVideoTitle"></span>
+        </div>
+    </div>
+
+    <script>
+        // ========== VIDEO LIBRARY ==========
+        // Define your video playlists by genre
+        const videoLibrary = {
+            'alt-rock': [
+                {
+                    path: 'videos/alt-rock/nirvana-smells-like-teen-spirit.mp4',
+                    title: 'Nirvana - Smells Like Teen Spirit',
+                    artist: 'Nirvana'
+                },
+                {
+                    path: 'videos/alt-rock/foo-fighters-everlong.mp4',
+                    title: 'Foo Fighters - Everlong',
+                    artist: 'Foo Fighters'
+                },
+                {
+                    path: 'videos/alt-rock/radiohead-creep.mp4',
+                    title: 'Radiohead - Creep',
+                    artist: 'Radiohead'
+                },
+                {
+                    path: 'videos/alt-rock/pearl-jam-alive.mp4',
+                    title: 'Pearl Jam - Alive',
+                    artist: 'Pearl Jam'
+                }
+            ],
+            'hip-hop': [
+                {
+                    path: 'videos/hip-hop/nwa-straight-outta-compton.mp4',
+                    title: 'N.W.A. - Straight Outta Compton',
+                    artist: 'N.W.A.'
+                },
+                {
+                    path: 'videos/hip-hop/tupac-california-love.mp4',
+                    title: '2Pac - California Love',
+                    artist: '2Pac'
+                },
+                {
+                    path: 'videos/hip-hop/notorious-big-juicy.mp4',
+                    title: 'The Notorious B.I.G. - Juicy',
+                    artist: 'Notorious B.I.G.'
+                },
+                {
+                    path: 'videos/hip-hop/dr-dre-nuthin-but-a-g-thang.mp4',
+                    title: 'Dr. Dre - Nuthin\' But A \'G\' Thang',
+                    artist: 'Dr. Dre'
+                }
+            ],
+            'pop': [
+                {
+                    path: 'videos/pop/michael-jackson-thriller.mp4',
+                    title: 'Michael Jackson - Thriller',
+                    artist: 'Michael Jackson'
+                },
+                {
+                    path: 'videos/pop/madonna-like-a-prayer.mp4',
+                    title: 'Madonna - Like A Prayer',
+                    artist: 'Madonna'
+                },
+                {
+                    path: 'videos/pop/whitney-houston-i-wanna-dance-with-somebody.mp4',
+                    title: 'Whitney Houston - I Wanna Dance With Somebody',
+                    artist: 'Whitney Houston'
+                }
+            ]
+        };
+
+        // ========== DOM ELEMENTS ==========
+        const altBtn = document.getElementById('startAlt');
+        const hipBtn = document.getElementById('startHipHop');
+        const popBtn = document.getElementById('startPop');
+        const overlay = document.getElementById('startOverlay');
+        const video = document.getElementById('musicVideo');
+        const nowPlayingDiv = document.getElementById('nowPlaying');
+        const currentVideoTitle = document.getElementById('currentVideoTitle');
+
+        // ========== CHANNEL STATE ==========
+        let currentChannel = null;
+        let currentPlaylist = [];
+        let currentVideoIndex = 0;
+        let isPlaying = false;
+
+        // ========== HELPER FUNCTIONS ==========
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            document.body.appendChild(errorDiv);
+            setTimeout(() => errorDiv.remove(), 5000);
+        }
+
+        function updateNowPlaying(videoInfo) {
+            if (videoInfo) {
+                currentVideoTitle.textContent = videoInfo.title;
+                nowPlayingDiv.style.display = 'block';
+            } else {
+                nowPlayingDiv.style.display = 'none';
+            }
+        }
+
+        // Get a random video from the playlist (for that "MTV randomness" feel)
+        function getRandomVideoFromPlaylist(playlist) {
+            return Math.floor(Math.random() * playlist.length);
+        }
+
+        // Get next video (sequential or random - you choose!)
+        function getNextVideoIndex(playlist, currentIndex) {
+            // OPTION 1: Sequential (like traditional TV)
+            // return (currentIndex + 1) % playlist.length;
+
+            // OPTION 2: Random (more like modern streaming)
+            // return Math.floor(Math.random() * playlist.length);
+
+            // OPTION 3: Weighted random (favor higher-ranked videos - for your algorithm)
+            // You can implement your ranking algorithm here
+            return Math.floor(Math.random() * playlist.length);
+        }
+
+        // ========== CORE VIDEO PLAYBACK ==========
+        async function loadAndPlayVideo(videoInfo) {
+            try {
+                // Set the video source
+                video.src = videoInfo.path;
+
+                // Update now playing display
+                updateNowPlaying(videoInfo);
+
+                // Wait for the video to be ready
+                await new Promise((resolve, reject) => {
+                    const onCanPlay = () => {
+                        video.removeEventListener('canplaythrough', onCanPlay);
+                        video.removeEventListener('error', onError);
+                        resolve();
+                    };
+
+                    const onError = (e) => {
+                        video.removeEventListener('canplaythrough', onCanPlay);
+                        video.removeEventListener('error', onError);
+                        reject(new Error(`Video failed to load: ${video.error?.message || 'Unknown error'}`));
+                    };
+
+                    video.addEventListener('canplaythrough', onCanPlay);
+                    video.addEventListener('error', onError);
+
+                    // Start loading
+                    video.load();
+
+                    // Set a timeout in case loading takes too long
+                    setTimeout(() => reject(new Error('Video loading timeout')), 10000);
+                });
+
+                // Play the video
+                video.muted = false;
+                await video.play();
+                isPlaying = true;
+                console.log('✅ Playing:', videoInfo.title);
+
+            } catch (error) {
+                console.error('❌ Playback failed:', error);
+                showError(`Failed to play video: ${error.message}`);
+
+                // Try next video if this one fails
+                if (currentPlaylist.length > 0) {
+                    console.log('Trying next video...');
+                    playNextVideo();
+                }
+            }
+        }
+
+        // Play the next video in the playlist
+        function playNextVideo() {
+            if (!currentPlaylist || currentPlaylist.length === 0) {
+                showError('No videos in playlist');
+                return;
+            }
+
+            // Get next video index
+            currentVideoIndex = getNextVideoIndex(currentPlaylist, currentVideoIndex);
+
+            // Load and play the video
+            loadAndPlayVideo(currentPlaylist[currentVideoIndex]);
+        }
+
+        // ========== CHANNEL MANAGEMENT ==========
+        function startChannel(channelName) {
+            // Get the playlist for this channel
+            const playlist = videoLibrary[channelName];
+
+            if (!playlist || playlist.length === 0) {
+                showError(`No videos found for ${channelName} channel`);
+                return;
+            }
+
+            // Set current channel and playlist
+            currentChannel = channelName;
+            currentPlaylist = playlist;
+
+            // Start with a random video
+            currentVideoIndex = getRandomVideoFromPlaylist(playlist);
+
+            // Hide overlay
+            overlay.classList.add('hidden');
+
+            // Load and play the first video
+            loadAndPlayVideo(playlist[currentVideoIndex]);
+        }
+
+        // ========== EVENT LISTENERS ==========
+        altBtn.addEventListener('click', () => startChannel('alt-rock'));
+        hipBtn.addEventListener('click', () => startChannel('hip-hop'));
+        popBtn.addEventListener('click', () => startChannel('pop'));
+
+        // Handle video ending - play next video
+        video.addEventListener('ended', () => {
+            console.log('Video ended, playing next...');
+            playNextVideo();
+        });
+
+        // Handle errors during playback
+        video.addEventListener('error', (e) => {
+            console.error('Video playback error:', video.error);
+            if (currentPlaylist.length > 0) {
+                playNextVideo();
+            }
+        });
+
+        // Add keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (video.paused) {
+                    video.play();
+                } else {
+                    video.pause();
+                }
+            } else if (e.code === 'ArrowRight') {
+                // Skip to next video
+                playNextVideo();
+            }
+        });
+
+        // Pre-check if first video exists 
+        async function checkVideoExists(videoPath) {
+            try {
+                const response = await fetch(videoPath, { method: 'HEAD' });
+                if (!response.ok) {
+                    console.warn(`⚠️ Video file may not exist: ${videoPath} (Status: ${response.status})`);
+                } else {
+                    console.log('✅ Video file exists:', videoPath);
+                }
+            } catch (error) {
+                console.warn('Could not check video file:', error);
+            }
+        }
+
+        // Check videos when page loads (optional - remove comment to enable)
+        // Object.values(videoLibrary).flat().forEach(video => {
+        //     checkVideoExists(video.path);
+        // });
+    </script>
+</body>
+
+</html>

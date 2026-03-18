@@ -1,0 +1,55 @@
+        /* Quick debug styles - add these temporarily */
+        .error-message {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            z-index: 2000;
+            font-family: Arial, sans-serif;
+        }
+
+        .start-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+        }
+
+        .start-overlay.hidden {
+            display: none;
+        }
+
+        .startbttn {
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            background: #ffe8d6;
+            color: #6b705c;
+            border: none;
+            border-radius: 5px;
+        }
+
+        #musicVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: black;
+        }
+
+        .channel-container {
+            width: 100vw;
+            height: 100vh;
+            background: black;
+        }
